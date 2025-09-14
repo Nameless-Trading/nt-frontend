@@ -71,10 +71,9 @@
     <table>
         <thead>
             <tr>
-                <th colspan="2"></th>
+                <th colspan="3"></th>
                 <th colspan="2">Bid</th>
                 <th colspan="2">Ask</th>
-                <th></th>
             </tr>
             <tr>
                 <th>Ticker</th>
