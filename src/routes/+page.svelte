@@ -40,7 +40,8 @@
 		return date.toLocaleDateString('en-US', {
 			weekday: 'long',
 			month: 'long',
-			day: 'numeric'
+			day: 'numeric',
+			timeZone: 'UTC'
 		});
 	}
 
@@ -68,6 +69,8 @@
 	ws.onmessage = function (event) {
 		const market_raw = JSON.parse(event.data);
 
+		console.log(market_raw)
+
 		const market_clean: Market = {
 			ticker: market_raw.ticker,
 			bidPrice: market_raw.bid_price,
@@ -82,6 +85,7 @@
 			estimatedStartTime: parseUTC(market_raw.estimated_start_time),
 			gameDate: market_raw.game_date
 		};
+
 
 		const ticker: string = market_clean.ticker;
 		markets = { ...markets, [ticker]: market_clean };
