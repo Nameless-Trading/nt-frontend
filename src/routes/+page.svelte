@@ -3,6 +3,7 @@
 	import { onMount } from 'svelte';
 	import * as Table from '$lib/components/ui/table/index.js';
 	import * as Card from '$lib/components/ui/card/index.js';
+	import {PUBLIC_FASTAPI_WS} from "$env/static/public"
 
 	let connected = $state(false);
 	let markets: Record<string, Market> = $state({});
@@ -58,7 +59,7 @@
 		gameDate: string;
 	}
 
-	const ws = new WebSocket('ws://localhost:8000/ws');
+	const ws = new WebSocket(PUBLIC_FASTAPI_WS);
 
 	ws.onopen = function (event) {
 		connected = true;
