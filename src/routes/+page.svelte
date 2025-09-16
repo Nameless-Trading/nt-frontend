@@ -60,7 +60,9 @@
 		gameDate: string;
 	}
 
-	const ws = new WebSocket(PUBLIC_FASTAPI_URL + "/ws");
+	const ws = new WebSocket("ws://" + PUBLIC_FASTAPI_URL + "/ws");
+
+	console.log(PUBLIC_FASTAPI_URL)
 
 	ws.onopen = function (event) {
 		connected = true;
