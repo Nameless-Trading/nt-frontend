@@ -62,7 +62,7 @@
 
 	const ws = new WebSocket(PUBLIC_FASTAPI_WS + "/ws");
 
-	console.log(PUBLIC_FASTAPI_WS)
+	// console.log(PUBLIC_FASTAPI_WS)
 
 	ws.onopen = function (event) {
 		connected = true;
@@ -71,7 +71,7 @@
 	ws.onmessage = function (event) {
 		const market_raw = JSON.parse(event.data);
 
-		console.log(market_raw)
+		// console.log(market_raw)
 
 		const market_clean: Market = {
 			ticker: market_raw.ticker,
@@ -94,7 +94,7 @@
 	};
 </script>
 
-<div class="flex flex-col gap-4">
+<div class="flex flex-col gap-4 max-w-screen px-4 py-4 lg:px-32">
     <Card.Root class="p-4">
         Status: {connected ? 'Connected to websocket' : 'Disconnected from websocket'}
     </Card.Root>

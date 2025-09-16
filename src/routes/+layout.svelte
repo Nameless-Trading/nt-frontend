@@ -9,7 +9,7 @@
 	<link rel="icon" href={favicon} />
 </svelte:head>
 
-<div class="flex px-32 py-4 justify-start">
+<div class="flex justify-center">
 	<div>
 		{@render children?.()}
 	</div>
