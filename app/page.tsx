@@ -1,14 +1,12 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { TrendingUp } from "lucide-react"
 import { Area, AreaChart, CartesianGrid, XAxis } from "recharts"
 
 import {
   Card,
   CardContent,
   CardDescription,
-  CardFooter,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
@@ -20,33 +18,31 @@ import {
 } from "@/components/ui/chart"
 import { getPortfolioHistory, type PortfolioSnapshot } from "@/lib/api"
 
-export const description = "A simple area chart"
-
 const chartConfig = {
   cumulative_return: {
-    label: "Portfolio Value",
-    color: "var(--chart-1)",
+    label: "Cumulative Return",
+    color: "hsl(142, 76%, 36%)",
   },
 } satisfies ChartConfig
 
-export default function ChartAreaDefault() {
-  const [chartData, setChartData] = useState<Array<{ month: string; cumulative_return: number }>>([])
+type Period = "1D" | "5D" | "1M" | "6M" | "1Y" | "ALL"
+
+export default function PortfolioHistory() {
+  const [chartData, setChartData] = useState<Array<{ date: string; cumulative_return: number }>>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [selectedPeriod, setSelectedPeriod] = useState<Period>("5D")
 
   useEffect(() => {
     async function fetchData() {
       try {
         setLoading(true)
-        const data = await getPortfolioHistory("5D")
+        const data = await getPortfolioHistory(selectedPeriod)
 
-        // Transform the data to match the chart format
         const transformedData = data.map((snapshot: PortfolioSnapshot) => ({
-          month: new Date(snapshot.timestamp).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+          date: new Date(snapshot.timestamp).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
           cumulative_return: snapshot.cumulative_return * 100,
         }))
-
-        console.log(transformedData)
 
         setChartData(transformedData)
         setError(null)
@@ -58,86 +54,76 @@ export default function ChartAreaDefault() {
     }
 
     fetchData()
-  }, [])
+  }, [selectedPeriod])
 
-  if (loading) {
-    return (
-      <div className="px-128 py-32">
-        <Card>
-          <CardHeader>
-            <CardTitle>Portfolio History</CardTitle>
-            <CardDescription>Loading...</CardDescription>
-          </CardHeader>
-        </Card>
-      </div>
-    )
-  }
-
-  if (error) {
-    return (
-      <div className="px-128 py-32">
-        <Card>
-          <CardHeader>
-            <CardTitle>Portfolio History</CardTitle>
-            <CardDescription className="text-red-500">{error}</CardDescription>
-          </CardHeader>
-        </Card>
-      </div>
-    )
-  }
+  const periods: Period[] = ["1D", "5D", "1M", "6M", "1Y", "ALL"]
 
   return (
-    <div className="px-128 py-32">
-      <Card>
+    <div className="flex items-center justify-center min-h-screen p-8">
+      <Card className="w-full max-w-4xl">
         <CardHeader>
-          <CardTitle>Portfolio History</CardTitle>
-          <CardDescription>
-            Showing portfolio value for the last month
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <ChartContainer config={chartConfig}>
-            <AreaChart
-              accessibilityLayer
-              data={chartData}
-              margin={{
-                left: 12,
-                right: 12,
-              }}
-            >
-              <CartesianGrid vertical={false} />
-              <XAxis
-                dataKey="month"
-                tickLine={false}
-                axisLine={false}
-                tickMargin={8}
-              />
-              <ChartTooltip
-                cursor={false}
-                content={<ChartTooltipContent indicator="line" />}
-              />
-              <Area
-                dataKey="cumulative_return"
-                type="natural"
-                fill="var(--color-cumulative_return)"
-                fillOpacity={0.4}
-                stroke="var(--color-cumulative_return)"
-              />
-            </AreaChart>
-          </ChartContainer>
-        </CardContent>
-        <CardFooter>
-          <div className="flex w-full items-start gap-2 text-sm">
-            <div className="grid gap-2">
-              <div className="flex items-center gap-2 leading-none font-medium">
-                Portfolio performance <TrendingUp className="h-4 w-4" />
-              </div>
-              <div className="text-muted-foreground flex items-center gap-2 leading-none">
-                Last 30 days
-              </div>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle>Portfolio History</CardTitle>
+              <CardDescription>
+                {loading ? "Loading..." : error ? error : "Cumulative return over time"}
+              </CardDescription>
+            </div>
+            <div className="flex gap-1">
+              {periods.map((period) => (
+                <button
+                  key={period}
+                  onClick={() => setSelectedPeriod(period)}
+                  disabled={loading}
+                  className={`px-3 py-1.5 rounded text-sm font-medium transition-colors ${
+                    selectedPeriod === period
+                      ? "bg-primary text-primary-foreground"
+                      : "bg-muted hover:bg-muted/80"
+                  } ${loading ? "opacity-50 cursor-not-allowed" : ""}`}
+                >
+                  {period}
+                </button>
+              ))}
             </div>
           </div>
-        </CardFooter>
+        </CardHeader>
+        <CardContent>
+          {loading || error ? (
+            <div className="h-96 flex items-center justify-center text-muted-foreground">
+              {loading ? "Loading chart data..." : "Failed to load chart"}
+            </div>
+          ) : (
+            <ChartContainer config={chartConfig}>
+              <AreaChart
+                accessibilityLayer
+                data={chartData}
+                margin={{
+                  left: 12,
+                  right: 12,
+                }}
+              >
+                <CartesianGrid vertical={false} />
+                <XAxis
+                  dataKey="date"
+                  tickLine={false}
+                  axisLine={false}
+                  tickMargin={8}
+                />
+                <ChartTooltip
+                  cursor={false}
+                  content={<ChartTooltipContent indicator="line" />}
+                />
+                <Area
+                  dataKey="cumulative_return"
+                  type="linear"
+                  fill="var(--color-cumulative_return)"
+                  fillOpacity={0.4}
+                  stroke="var(--color-cumulative_return)"
+                />
+              </AreaChart>
+            </ChartContainer>
+          )}
+        </CardContent>
       </Card>
     </div>
   )
