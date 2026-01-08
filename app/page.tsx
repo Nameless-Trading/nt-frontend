@@ -1,7 +1,8 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { Area, AreaChart, CartesianGrid, XAxis } from "recharts"
+import { RefreshCw } from "lucide-react"
 
 import {
   Card,
@@ -44,63 +45,76 @@ export default function PortfolioHistory() {
   const [error, setError] = useState<string | null>(null)
   const [selectedPeriod, setSelectedPeriod] = useState<Period>("5D")
 
-  useEffect(() => {
-    async function fetchData() {
-      try {
-        setLoading(true)
-        const data = await getPortfolioHistory(selectedPeriod)
+  const fetchData = useCallback(async () => {
+    try {
+      setLoading(true)
+      const data = await getPortfolioHistory(selectedPeriod)
 
-        const transformedData = data.map((snapshot: PortfolioSnapshot) => ({
-          date: new Date(snapshot.timestamp).toLocaleDateString('en-US', {
-            month: 'short',
-            day: 'numeric',
-            timeZone: 'America/New_York'
-          }),
-          cumulative_return: snapshot.cumulative_return * 100,
-          value: snapshot.value,
-          timestamp: new Date(snapshot.timestamp).toLocaleString('en-US', {
-            month: 'short',
-            day: 'numeric',
-            year: 'numeric',
-            hour: 'numeric',
-            minute: '2-digit',
-            timeZone: 'America/New_York',
-            timeZoneName: 'short'
-          }),
-        }))
+      const transformedData = data.map((snapshot: PortfolioSnapshot) => ({
+        date: new Date(snapshot.timestamp).toLocaleDateString('en-US', {
+          month: 'short',
+          day: 'numeric',
+          timeZone: 'America/New_York'
+        }),
+        cumulative_return: snapshot.cumulative_return * 100,
+        value: snapshot.value,
+        timestamp: new Date(snapshot.timestamp).toLocaleString('en-US', {
+          month: 'short',
+          day: 'numeric',
+          year: 'numeric',
+          hour: 'numeric',
+          minute: '2-digit',
+          timeZone: 'America/New_York',
+          timeZoneName: 'short'
+        }),
+      }))
 
-        setChartData(transformedData)
-        setError(null)
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to fetch portfolio history')
-      } finally {
-        setLoading(false)
-      }
+      setChartData(transformedData)
+      setError(null)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to fetch portfolio history')
+    } finally {
+      setLoading(false)
     }
-
-    fetchData()
   }, [selectedPeriod])
+
+  useEffect(() => {
+    fetchData()
+  }, [fetchData])
 
   const periods: Period[] = ["1D", "5D", "1M", "6M", "1Y", "ALL"]
 
   return (
     <div className="flex items-center justify-center min-h-screen p-8">
       <div className="w-full max-w-6xl space-y-6">
-        <div className="flex justify-end gap-1">
-          {periods.map((period) => (
-            <button
-              key={period}
-              onClick={() => setSelectedPeriod(period)}
-              disabled={loading}
-              className={`px-3 py-1.5 rounded text-sm font-medium transition-colors ${
-                selectedPeriod === period
-                  ? "bg-primary text-primary-foreground"
-                  : "bg-muted hover:bg-muted/80"
-              } ${loading ? "opacity-50 cursor-not-allowed" : ""}`}
-            >
-              {period}
-            </button>
-          ))}
+        <div className="flex justify-between items-center">
+          <div className="flex gap-1">
+            {periods.map((period) => (
+              <button
+                key={period}
+                onClick={() => setSelectedPeriod(period)}
+                disabled={loading}
+                className={`px-3 py-1.5 rounded text-sm font-medium transition-colors ${
+                  selectedPeriod === period
+                    ? "bg-primary text-primary-foreground"
+                    : "bg-muted hover:bg-muted/80"
+                } ${loading ? "opacity-50 cursor-not-allowed" : ""}`}
+              >
+                {period}
+              </button>
+            ))}
+          </div>
+          <button
+            onClick={fetchData}
+            disabled={loading}
+            className={`flex items-center gap-2 px-3 py-1.5 rounded text-sm font-medium transition-colors bg-muted hover:bg-muted/80 ${
+              loading ? "opacity-50 cursor-not-allowed" : ""
+            }`}
+            title="Refresh data"
+          >
+            <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
+            Refresh
+          </button>
         </div>
 
         <Card>
@@ -110,7 +124,7 @@ export default function PortfolioHistory() {
           </CardHeader>
           <CardContent>
             {loading || error ? (
-              <div className="h-96 flex items-center justify-center text-muted-foreground">
+              <div className="h-128 flex items-center justify-center text-muted-foreground">
                 {loading ? "Loading chart data..." : "Failed to load chart"}
               </div>
             ) : (
