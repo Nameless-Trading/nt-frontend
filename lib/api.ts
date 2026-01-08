@@ -5,8 +5,10 @@ export interface PortfolioSnapshot {
     cumulative_return: number;
 }
 
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://127.0.0.1:8000';
+
 export async function getPortfolioHistory(period: string): Promise<PortfolioSnapshot[]> {
-    const url = `http://127.0.0.1:8000/portfolio_history/${period}`;
+    const url = `${API_BASE_URL}/portfolio_history/${period}`;
     const response = await fetch(url);
 
     if (!response.ok) {
