@@ -252,7 +252,7 @@ export default function PortfolioHistory() {
                 </button>
               </div>
             ) : (
-              <ChartContainer config={chartConfig}>
+              <ChartContainer config={chartConfig} className="lg:max-h-104 xl:max-h-112 2xl:max-h-120">
                 <AreaChart
                   accessibilityLayer
                   data={chartData}
