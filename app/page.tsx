@@ -116,46 +116,48 @@ export default function PortfolioHistory() {
   }
 
   return (
-    <div className="flex items-start justify-center min-h-screen p-8">
+    <div className="flex items-start justify-center min-h-screen overflow-x-hidden p-4 sm:p-8">
       <div className="w-full max-w-6xl space-y-8">
-        <div className="flex items-start justify-between">
+        <div className="flex min-w-0 flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div className="space-y-1">
-            <h1 className="text-2xl font-semibold tracking-tight">
+            <h1 className="text-xl font-semibold tracking-tight sm:text-2xl">
               Nameless Trading Portfolio Overview
             </h1>
             <p className="text-muted-foreground text-sm">
               Track performance and returns across time ranges.
             </p>
           </div>
-          <div className="flex items-center gap-3">
-            <div
-              className={`bg-muted/70 flex rounded-lg p-1 ring-1 ring-border ${
+          <div className="flex w-full min-w-0 items-center gap-3 sm:w-auto">
+            <div className="max-w-full flex-1 overflow-x-auto sm:overflow-visible">
+              <div
+                className={`bg-muted/70 flex flex-nowrap rounded-lg p-1 ring-1 ring-border ${
                 loading ? "opacity-70" : ""
               }`}
-              role="tablist"
-              aria-label="Select period"
-            >
-              {periods.map((period) => {
-                const active = selectedPeriod === period;
-                return (
-                  <button
-                    key={period}
-                    onClick={() => setSelectedPeriod(period)}
-                    disabled={loading}
-                    role="tab"
-                    aria-selected={active}
-                    className={`px-3 py-1.5 rounded-md text-sm font-medium transition-all
-                      ${
-                        active
-                          ? "bg-background text-foreground shadow-sm ring-1 ring-border"
-                          : "text-muted-foreground hover:text-foreground"
-                      } ${loading ? "cursor-not-allowed" : ""}`}
-                    title={`Show ${period} period`}
-                  >
-                    {period}
-                  </button>
-                );
-              })}
+                role="tablist"
+                aria-label="Select period"
+              >
+                {periods.map((period) => {
+                  const active = selectedPeriod === period;
+                  return (
+                    <button
+                      key={period}
+                      onClick={() => setSelectedPeriod(period)}
+                      disabled={loading}
+                      role="tab"
+                      aria-selected={active}
+                      className={`px-3 py-1.5 rounded-md text-sm font-medium transition-all
+                        ${
+                          active
+                            ? "bg-background text-foreground shadow-sm ring-1 ring-border"
+                            : "text-muted-foreground hover:text-foreground"
+                        } ${loading ? "cursor-not-allowed" : ""}`}
+                      title={`Show ${period} period`}
+                    >
+                      {period}
+                    </button>
+                  );
+                })}
+              </div>
             </div>
             <button
               onClick={fetchData}
@@ -237,7 +239,7 @@ export default function PortfolioHistory() {
           </CardHeader>
           <CardContent>
             {loading ? (
-              <div className="h-80 w-full animate-pulse rounded-lg bg-muted" />
+              <div className="h-64 w-full animate-pulse rounded-lg bg-muted sm:h-80" />
             ) : error ? (
               <div className="flex flex-col items-start gap-3 rounded-lg border p-4">
                 <div className="text-sm">
@@ -252,7 +254,7 @@ export default function PortfolioHistory() {
                 </button>
               </div>
             ) : (
-              <ChartContainer config={chartConfig} className="lg:max-h-104 xl:max-h-112 2xl:max-h-120">
+              <ChartContainer config={chartConfig} className="w-full lg:max-h-104 xl:max-h-112 2xl:max-h-120">
                 <AreaChart
                   accessibilityLayer
                   data={chartData}
