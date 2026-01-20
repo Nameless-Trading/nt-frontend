@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { Area, AreaChart, CartesianGrid, XAxis, YAxis, ReferenceLine, Line } from "recharts";
+import { Area, AreaChart, CartesianGrid, XAxis, YAxis } from "recharts";
 import { RefreshCw } from "lucide-react";
 
 import {
@@ -16,7 +16,7 @@ import {
   ChartTooltip,
   type ChartConfig,
 } from "@/components/ui/chart";
-import { getPortfolioHistory, getBenchmarkHistory, type PortfolioSnapshot, type BenchmarkSnapshot } from "@/lib/api";
+import { getPortfolioHistory, type PortfolioSnapshot } from "@/lib/api";
 import { ThemeToggle } from "@/components/theme-toggle";
 
 const chartConfig = {
@@ -24,17 +24,9 @@ const chartConfig = {
     label: "Portfolio",
     color: "hsl(var(--chart-1))",
   },
-  benchmark_price: {
-    label: "SPY",
-    color: "hsl(var(--muted-foreground))",
-  },
   cumulative_return: {
     label: "Portfolio Return",
     color: "hsl(var(--chart-1))",
-  },
-  benchmark_return: {
-    label: "Benchmark Return",
-    color: "hsl(var(--muted-foreground))",
   },
   timestamp: {
     label: "Time",
@@ -48,9 +40,7 @@ export default function PortfolioHistory() {
     Array<{
       date: string;
       cumulative_return: number;
-      benchmark_return: number;
       value: number;
-      benchmark_price: number;
       timestamp: string;
     }>
   >([]);
@@ -60,42 +50,13 @@ export default function PortfolioHistory() {
   const [hoveredValue, setHoveredValue] = useState<number | null>(null);
   const [, setHoveredDate] = useState<string | null>(null);
   const [hoveredShortDate, setHoveredShortDate] = useState<string | null>(null);
-  const [showBenchmark, setShowBenchmark] = useState(true);
 
   const fetchData = useCallback(async () => {
     try {
       setLoading(true);
-      const [portfolioData, benchmarkData] = await Promise.all([
-        getPortfolioHistory(selectedPeriod),
-        getBenchmarkHistory(selectedPeriod),
-      ]);
-
-      // Remove fractional seconds from each timestamp for better comparison/normalization
-      const normalizeTimestamp = (timestamp: string) => {
-        return timestamp.split('.')[0];
-      };
-
-      // Create a map of benchmark data by normalized timestamp
-      const benchmarkMap = new Map(
-        benchmarkData.map((snapshot: BenchmarkSnapshot) => [
-          normalizeTimestamp(snapshot.timestamp),
-          {
-            cumulative_return: snapshot.cumulative_return * 100,
-            price: snapshot.price,
-          },
-        ])
-      );
-
-      const initialPortfolioValue = portfolioData[0]?.value ?? 1;
-      const initialBenchmarkPrice = benchmarkData[0]?.price ?? 1;
-      
-      // Scale factor to normalize benchmark price to portfolio value for the chart (@andrew take a look at this)
-      const scaleFactor = initialPortfolioValue / initialBenchmarkPrice;
+      const portfolioData = await getPortfolioHistory(selectedPeriod);
 
       const transformedData = portfolioData.map((snapshot: PortfolioSnapshot) => {
-        const normalizedTimestamp = normalizeTimestamp(snapshot.timestamp);
-        const benchmarkData = benchmarkMap.get(normalizedTimestamp);
-        
         return {
           date: new Date(snapshot.timestamp).toLocaleDateString("en-US", {
             month: "short",
@@ -103,9 +64,7 @@ export default function PortfolioHistory() {
             timeZone: "America/New_York",
           }),
           cumulative_return: snapshot.cumulative_return * 100,
-          benchmark_return: benchmarkData?.cumulative_return ?? 0,
           value: snapshot.value,
-          benchmark_price: (benchmarkData?.price ?? initialBenchmarkPrice) * scaleFactor,
           timestamp: new Date(snapshot.timestamp).toLocaleString("en-US", {
             month: "short",
             day: "numeric",
@@ -145,12 +104,7 @@ export default function PortfolioHistory() {
       ? ((latest.value - first.value) / first.value) * 100
       : null;
   const latestReturnPct = latest?.cumulative_return ?? null;
-  const latestBenchmarkPct = latest?.benchmark_return ?? null;
   const lastUpdated = latest?.timestamp ?? null;
-  
-  const outperformance = latestReturnPct !== null && latestBenchmarkPct !== null
-    ? latestReturnPct - latestBenchmarkPct
-    : null;
 
   function formatCurrency(value: number | null | undefined) {
     if (value === null || value === undefined || Number.isNaN(value))
@@ -172,30 +126,10 @@ export default function PortfolioHistory() {
   const isPositive = periodChangeAbs !== null && periodChangeAbs >= 0;
   const displayValue = hoveredValue ?? latestValue;
 
-  // Calculate benchmark-adjusted values when SPY is shown
-  const benchmarkValue = first && latest 
-    ? first.value * (1 + (latest.benchmark_return - first.benchmark_return) / 100)
-    : null;
-  
-  const benchmarkChangeAbs = benchmarkValue && first 
-    ? benchmarkValue - first.value 
-    : null;
-
-  // When showing benchmark, display outperformance; otherwise show absolute change
-  const displayChangeAbs = showBenchmark && benchmarkValue
-    ? (latestValue ?? 0) - benchmarkValue
-    : periodChangeAbs;
-  
-  const displayChangePct = showBenchmark && benchmarkValue && first.value !== 0
-    ? (((latestValue ?? 0) - benchmarkValue) / first.value) * 100
-    : periodChangePct;
-
-  const isDisplayPositive = displayChangeAbs !== null && displayChangeAbs >= 0;
-
-  const hoveredChangeAbs = hoveredValue && first ? hoveredValue - first.value : displayChangeAbs;
+  const hoveredChangeAbs = hoveredValue && first ? hoveredValue - first.value : periodChangeAbs;
   const hoveredChangePct = hoveredValue && first && first.value !== 0
     ? ((hoveredValue - first.value) / first.value) * 100
-    : displayChangePct;
+    : periodChangePct;
   const isHoveredPositive = hoveredChangeAbs !== null && hoveredChangeAbs >= 0;
 
   return (
@@ -208,24 +142,6 @@ export default function PortfolioHistory() {
             </h1>
           </div>
           <div className="flex items-center gap-2 flex-wrap">
-            <div className="flex items-center gap-2 px-3 py-1.5 sm:py-2 rounded-lg bg-muted">
-              <span className="text-xs sm:text-sm font-medium text-foreground">vs SPY</span>
-              <button
-                onClick={() => setShowBenchmark(!showBenchmark)}
-                className={`relative inline-flex h-5 w-9 sm:h-6 sm:w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary ${
-                  showBenchmark ? "bg-emerald-600" : "bg-muted-foreground/30"
-                }`}
-                role="switch"
-                aria-checked={showBenchmark}
-                aria-label="Toggle benchmark"
-              >
-                <span
-                  className={`inline-block h-3.5 w-3.5 sm:h-4 sm:w-4 transform rounded-full bg-white transition-transform ${
-                    showBenchmark ? "translate-x-4 sm:translate-x-6" : "translate-x-0.5 sm:translate-x-1"
-                  }`}
-                />
-              </button>
-            </div>
             <ThemeToggle />
             <button
               onClick={fetchData}
@@ -333,12 +249,12 @@ export default function PortfolioHistory() {
                       >
                       <stop
                         offset="0%"
-                        stopColor={isDisplayPositive ? "hsl(142, 76%, 36%)" : "hsl(0, 72%, 51%)"}
+                        stopColor={isPositive ? "hsl(142, 76%, 36%)" : "hsl(0, 72%, 51%)"}
                         stopOpacity="0.4"
                       />
                       <stop
                         offset="100%"
-                        stopColor={isDisplayPositive ? "hsl(142, 76%, 36%)" : "hsl(0, 72%, 51%)"}
+                        stopColor={isPositive ? "hsl(142, 76%, 36%)" : "hsl(0, 72%, 51%)"}
                         stopOpacity="0"
                       />
                       </linearGradient>
@@ -382,16 +298,6 @@ export default function PortfolioHistory() {
                                   {formatCurrency(data.value)}
                                 </span>
                               </div>
-                              {showBenchmark && (
-                                <div className="flex items-center justify-between gap-3 sm:gap-4">
-                                  <span className="text-xs sm:text-sm font-medium" style={{ color: "#8B5CF6" }}>
-                                    SPY
-                                  </span>
-                                  <span className="text-xs sm:text-sm font-mono">
-                                    {formatCurrency(data.benchmark_price)}
-                                  </span>
-                                </div>
-                              )}
                             </div>
                           </div>
                         );
@@ -401,32 +307,16 @@ export default function PortfolioHistory() {
                       dataKey="value"
                       type="monotone"
                       fill="url(#portfolioGradient)"
-                      stroke={isDisplayPositive ? "hsl(142, 76%, 36%)" : "hsl(0, 72%, 51%)"}
+                      stroke={isPositive ? "hsl(142, 76%, 36%)" : "hsl(0, 72%, 51%)"}
                       strokeWidth={3}
                       dot={false}
                       activeDot={{
                         r: 6,
-                        fill: isDisplayPositive ? "hsl(142, 76%, 36%)" : "hsl(0, 72%, 51%)",
+                        fill: isPositive ? "hsl(142, 76%, 36%)" : "hsl(0, 72%, 51%)",
                         stroke: "hsl(var(--background))",
                         strokeWidth: 3,
                       }}
                     />
-                    {showBenchmark && (
-                      <Line
-                        dataKey="benchmark_price"
-                        type="monotone"
-                        stroke="#8B5CF6"
-                        strokeWidth={3}
-                        dot={false}
-                        isAnimationActive={false}
-                        activeDot={{
-                          r: 5,
-                          fill: "#8B5CF6",
-                          stroke: "hsl(var(--background))",
-                          strokeWidth: 2,
-                        }}
-                      />
-                    )}
                   </AreaChart>
                 </ChartContainer>
                 
@@ -456,7 +346,7 @@ export default function PortfolioHistory() {
           </CardContent>
         </Card>
 
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-4 mt-4 sm:mt-6">
+        <div className="grid grid-cols-2 gap-3 sm:gap-4 mt-4 sm:mt-6">
           <Card className="border-border/40 shadow-sm hover:shadow-md transition-shadow">
             <CardHeader className="pb-2 sm:pb-3">
               <CardDescription className="text-[10px] sm:text-xs font-medium uppercase tracking-wide">
@@ -495,29 +385,6 @@ export default function PortfolioHistory() {
             </CardHeader>
           </Card>
 
-          <Card className="border-border/40 col-span-2 sm:col-span-1 shadow-sm hover:shadow-md transition-shadow">
-            <CardHeader className="pb-2 sm:pb-3">
-              <CardDescription className="text-[10px] sm:text-xs font-medium uppercase tracking-wide">
-                vs Benchmark
-              </CardDescription>
-              <CardTitle className="text-lg sm:text-2xl font-bold">
-                {loading ? (
-                  <span className="inline-block h-6 sm:h-7 w-24 sm:w-28 animate-pulse rounded bg-muted" />
-                ) : (
-                  <span
-                    className={
-                      outperformance !== null && outperformance >= 0
-                        ? "text-emerald-600 dark:text-emerald-500"
-                        : "text-red-600 dark:text-red-500"
-                    }
-                  >
-                    {outperformance !== null && outperformance >= 0 ? "+" : ""}
-                    {formatPercent(outperformance)}
-                  </span>
-                )}
-              </CardTitle>
-            </CardHeader>
-          </Card>
         </div>
 
         {!loading && lastUpdated && (
