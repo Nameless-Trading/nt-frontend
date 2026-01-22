@@ -40,6 +40,7 @@ export default function PortfolioHistory() {
     Array<{
       date: string;
       cumulative_return: number;
+      cumulative_return_dollar: number;
       value: number;
       timestamp: string;
     }>
@@ -50,6 +51,8 @@ export default function PortfolioHistory() {
   const [hoveredValue, setHoveredValue] = useState<number | null>(null);
   const [, setHoveredDate] = useState<string | null>(null);
   const [hoveredShortDate, setHoveredShortDate] = useState<string | null>(null);
+  const [hoveredReturnDollar, setHoveredReturnDollar] = useState<number | null>(null);
+  const [hoveredReturnPct, setHoveredReturnPct] = useState<number | null>(null);
 
   const fetchData = useCallback(async () => {
     try {
@@ -64,6 +67,7 @@ export default function PortfolioHistory() {
             timeZone: "America/New_York",
           }),
           cumulative_return: snapshot.cumulative_return * 100,
+          cumulative_return_dollar: snapshot.cumulative_return_dollar,
           value: snapshot.value,
           timestamp: new Date(snapshot.timestamp).toLocaleString("en-US", {
             month: "short",
@@ -96,13 +100,8 @@ export default function PortfolioHistory() {
   const periods: Period[] = ["TODAY", "5D", "1M", "6M", "1Y", "ALL"];
 
   const latest = chartData.at(-1);
-  const first = chartData[0];
   const latestValue = latest?.value ?? null;
-  const periodChangeAbs = latest && first ? latest.value - first.value : null;
-  const periodChangePct =
-    latest && first && first.value !== 0
-      ? ((latest.value - first.value) / first.value) * 100
-      : null;
+  const latestReturnDollar = latest?.cumulative_return_dollar ?? null;
   const latestReturnPct = latest?.cumulative_return ?? null;
   const lastUpdated = latest?.timestamp ?? null;
 
@@ -123,14 +122,13 @@ export default function PortfolioHistory() {
     return `${value.toFixed(fractionDigits)}%`;
   }
 
-  const isPositive = periodChangeAbs !== null && periodChangeAbs >= 0;
+  const isPositive = latestReturnDollar !== null && latestReturnDollar >= 0;
   const displayValue = hoveredValue ?? latestValue;
-
-  const hoveredChangeAbs = hoveredValue && first ? hoveredValue - first.value : periodChangeAbs;
-  const hoveredChangePct = hoveredValue && first && first.value !== 0
-    ? ((hoveredValue - first.value) / first.value) * 100
-    : periodChangePct;
+  const hoveredChangeAbs = hoveredReturnDollar ?? latestReturnDollar;
+  const hoveredChangePct = hoveredReturnPct ?? latestReturnPct;
   const isHoveredPositive = hoveredChangeAbs !== null && hoveredChangeAbs >= 0;
+  const showTime = ["TODAY", "5D", "1M"].includes(selectedPeriod);
+
 
   return (
     <div className="flex items-start justify-center min-h-screen overflow-x-hidden bg-background">
@@ -170,31 +168,33 @@ export default function PortfolioHistory() {
                 )}
               </h2>
               {!loading && hoveredChangeAbs !== null && (
-                <div className="flex items-baseline gap-2 sm:gap-3 flex-wrap">
-                  <span
-                    className={`text-lg sm:text-2xl font-semibold ${
-                      isHoveredPositive
-                        ? "text-emerald-600 dark:text-emerald-500"
-                        : "text-red-600 dark:text-red-500"
-                    }`}
-                  >
-                    {isHoveredPositive ? "+" : ""}
-                    {formatCurrency(hoveredChangeAbs)}
-                  </span>
-                  <span
-                    className={`text-lg sm:text-2xl font-semibold ${
-                      isHoveredPositive
-                        ? "text-emerald-600 dark:text-emerald-500"
-                        : "text-red-600 dark:text-red-500"
-                    }`}
-                  >
-                    ({isHoveredPositive ? "+" : ""}
-                    {formatPercent(hoveredChangePct)})
-                  </span>
+                <>
+                  <div className="flex items-baseline gap-2 sm:gap-3 flex-wrap">
+                    <span
+                      className={`text-lg sm:text-2xl font-semibold ${
+                        isHoveredPositive
+                          ? "text-emerald-600 dark:text-emerald-500"
+                          : "text-red-600 dark:text-red-500"
+                      }`}
+                    >
+                      {isHoveredPositive ? "+" : ""}
+                      {formatCurrency(hoveredChangeAbs)}
+                    </span>
+                    <span
+                      className={`text-lg sm:text-2xl font-semibold ${
+                        isHoveredPositive
+                          ? "text-emerald-600 dark:text-emerald-500"
+                          : "text-red-600 dark:text-red-500"
+                      }`}
+                    >
+                      ({isHoveredPositive ? "+" : ""}
+                      {formatPercent(hoveredChangePct)})
+                    </span>
+                  </div>
                   <span className="text-sm sm:text-base text-muted-foreground font-normal">
-                    {hoveredShortDate || selectedPeriod}
+                    {hoveredShortDate || (showTime ? latest?.timestamp : latest?.date)}
                   </span>
-                </div>
+                </>
               )}
             </div>
           </CardHeader>
@@ -228,15 +228,20 @@ export default function PortfolioHistory() {
                     }}
                     onMouseMove={(data) => {
                       if (data && data.activePayload) {
-                        setHoveredValue(data.activePayload[0]?.payload?.value);
-                        setHoveredDate(data.activePayload[0]?.payload?.timestamp);
-                        setHoveredShortDate(data.activePayload[0]?.payload?.date);
+                        const payload = data.activePayload[0]?.payload;
+                        setHoveredValue(payload?.value);
+                        setHoveredDate(payload?.timestamp);
+                        setHoveredShortDate(showTime ? payload?.timestamp : payload?.date);
+                        setHoveredReturnDollar(payload?.cumulative_return_dollar);
+                        setHoveredReturnPct(payload?.cumulative_return);
                       }
                     }}
                     onMouseLeave={() => {
                       setHoveredValue(null);
                       setHoveredDate(null);
                       setHoveredShortDate(null);
+                      setHoveredReturnDollar(null);
+                      setHoveredReturnPct(null);
                     }}
                   >
                     <defs>
@@ -282,12 +287,12 @@ export default function PortfolioHistory() {
                       }}
                       content={({ active, payload }) => {
                         if (!active || !payload || !payload.length) return null;
-                        
+
                         const data = payload[0].payload;
                         return (
                           <div className="rounded-lg border bg-background p-2.5 sm:p-3 shadow-lg">
                             <p className="text-xs text-muted-foreground mb-1.5 sm:mb-2">
-                              {data.date}
+                              {showTime ? data.timestamp : data.date}
                             </p>
                             <div className="space-y-0.5 sm:space-y-1">
                               <div className="flex items-center justify-between gap-3 sm:gap-4">
