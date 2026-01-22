@@ -33,7 +33,7 @@ const chartConfig = {
   },
 } satisfies ChartConfig;
 
-type Period = "1D" | "5D" | "1M" | "6M" | "1Y" | "ALL";
+type Period = "TODAY" | "5D" | "1M" | "6M" | "1Y" | "ALL";
 
 export default function PortfolioHistory() {
   const [chartData, setChartData] = useState<
@@ -93,7 +93,7 @@ export default function PortfolioHistory() {
     fetchData();
   }, [fetchData]);
 
-  const periods: Period[] = ["1D", "5D", "1M", "6M", "1Y", "ALL"];
+  const periods: Period[] = ["TODAY", "5D", "1M", "6M", "1Y", "ALL"];
 
   const latest = chartData.at(-1);
   const first = chartData[0];
