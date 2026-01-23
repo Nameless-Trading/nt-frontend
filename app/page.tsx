@@ -16,7 +16,6 @@ import {
   type ChartConfig,
 } from "@/components/ui/chart";
 import { getPortfolioHistory, type PortfolioSnapshot } from "@/lib/api";
-import { ThemeToggle } from "@/components/theme-toggle";
 
 const chartConfig = {
   value: {
@@ -135,20 +134,15 @@ export default function PortfolioHistory() {
 
   return (
     <div className="flex items-start justify-center min-h-screen overflow-x-hidden bg-background">
-      <div className="w-full max-w-5xl px-3 sm:px-6 py-4 sm:py-12">
+      <div className="w-full max-w-6xl px-3 sm:px-6 py-6 sm:py-12">
         <div className="flex flex-col gap-4 mb-6 sm:mb-8">
-          <div className="flex items-start justify-between gap-3">
-            <div className="flex-1">
-              <h1 className="text-xl sm:text-2xl md:text-3xl font-bold tracking-tight">
-                Live Performance
-              </h1>
-              <p className="text-xs sm:text-sm md:text-base text-muted-foreground mt-1 font-medium">
-                Real-time strategy metrics and returns
-              </p>
-            </div>
-            <div className="flex items-center gap-2 shrink-0">
-              <ThemeToggle />
-            </div>
+          <div className="flex flex-col gap-2">
+            <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold tracking-tight">
+              Live Performance
+            </h1>
+            <p className="text-sm sm:text-base md:text-lg text-muted-foreground font-medium">
+              Real-time strategy metrics and returns
+            </p>
           </div>
 
           <div className="flex flex-wrap justify-start items-center gap-2 bg-transparent p-0">
