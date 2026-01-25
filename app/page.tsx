@@ -15,7 +15,12 @@ import {
   ChartTooltip,
   type ChartConfig,
 } from "@/components/ui/chart";
-import { getPortfolioHistory, type PortfolioSnapshot } from "@/lib/api";
+import {
+  getPortfolioHistory,
+  getPortfolioSummary,
+  type PortfolioSnapshot,
+  type PortfolioSummary,
+} from "@/lib/api";
 
 const chartConfig = {
   value: {
@@ -53,11 +58,15 @@ export default function PortfolioHistory() {
     null,
   );
   const [hoveredReturnPct, setHoveredReturnPct] = useState<number | null>(null);
+  const [summary, setSummary] = useState<PortfolioSummary | null>(null);
 
   const fetchData = useCallback(async () => {
     try {
       setLoading(true);
-      const portfolioData = await getPortfolioHistory(selectedPeriod);
+      const [portfolioData, summaryData] = await Promise.all([
+        getPortfolioHistory(selectedPeriod),
+        getPortfolioSummary(selectedPeriod),
+      ]);
 
       const transformedData = portfolioData.map(
         (snapshot: PortfolioSnapshot) => {
@@ -84,6 +93,7 @@ export default function PortfolioHistory() {
       );
 
       setChartData(transformedData);
+      setSummary(summaryData);
       setError(null);
     } catch (err) {
       console.error("Error fetching data:", err);
@@ -134,8 +144,8 @@ export default function PortfolioHistory() {
 
   return (
     <div className="flex items-start justify-center min-h-screen overflow-x-hidden bg-background">
-      <div className="w-full max-w-6xl px-3 sm:px-6 py-6 sm:py-12">
-        <div className="flex flex-col gap-4 mb-6 sm:mb-8">
+      <div className="w-full max-w-6xl px-3 sm:px-6 py-2 sm:py-4">
+        <div className="flex flex-col gap-3 mb-4 sm:mb-5">
           <div className="flex flex-col gap-2">
             <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold tracking-tight">
               Live Performance
@@ -145,7 +155,7 @@ export default function PortfolioHistory() {
             </p>
           </div>
 
-          <div className="flex flex-wrap justify-start items-center gap-2 bg-transparent p-0">
+          <div className="flex flex-wrap justify-start items-center gap-2">
             {periods.map((period) => {
               const active = selectedPeriod === period;
               return (
@@ -179,11 +189,11 @@ export default function PortfolioHistory() {
         </div>
 
         <Card className="border-4 border-foreground overflow-hidden shadow-none bg-white dark:bg-card">
-          <CardHeader className="pb-0 pt-4 sm:pt-6 px-4 sm:px-6 bg-white dark:bg-card">
-            <div className="flex flex-col gap-1 sm:gap-2">
-              <h2 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold tracking-tight font-mono">
+          <CardHeader className="pb-0 pt-3 sm:pt-4 md:pt-5 px-4 sm:px-6 bg-white dark:bg-card">
+            <div className="flex flex-col gap-1 sm:gap-1.5">
+              <h2 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight font-mono">
                 {loading ? (
-                  <span className="inline-block h-8 sm:h-10 md:h-14 w-32 sm:w-40 md:w-52 animate-pulse rounded bg-muted" />
+                  <span className="inline-block h-7 sm:h-8 md:h-12 w-32 sm:w-40 md:w-52 animate-pulse rounded bg-muted" />
                 ) : (
                   formatCurrency(displayValue)
                 )}
@@ -192,7 +202,7 @@ export default function PortfolioHistory() {
                 <>
                   <div className="flex items-baseline gap-2 sm:gap-3 flex-wrap">
                     <span
-                      className={`text-lg sm:text-xl md:text-2xl lg:text-3xl font-bold font-mono ${
+                      className={`text-base sm:text-lg md:text-xl lg:text-2xl font-bold font-mono ${
                         isHoveredPositive
                           ? "text-emerald-600 dark:text-emerald-500"
                           : "text-red-600 dark:text-red-500"
@@ -202,7 +212,7 @@ export default function PortfolioHistory() {
                       {formatCurrency(hoveredChangeAbs)}
                     </span>
                     <span
-                      className={`text-lg sm:text-xl md:text-2xl lg:text-3xl font-bold font-mono ${
+                      className={`text-base sm:text-lg md:text-xl lg:text-2xl font-bold font-mono ${
                         isHoveredPositive
                           ? "text-emerald-600 dark:text-emerald-500"
                           : "text-red-600 dark:text-red-500"
@@ -220,9 +230,9 @@ export default function PortfolioHistory() {
               )}
             </div>
           </CardHeader>
-          <CardContent className="pt-6 sm:pt-8 pb-4 sm:pb-6 px-2 sm:px-3 md:px-6 bg-white dark:bg-card">
+          <CardContent className="pt-4 sm:pt-5 pb-3 sm:pb-4 px-2 sm:px-3 md:px-6 bg-white dark:bg-card">
             {loading ? (
-              <div className="h-64 sm:h-80 md:h-96 w-full animate-pulse bg-muted" />
+              <div className="h-48 sm:h-56 md:h-64 w-full animate-pulse bg-muted" />
             ) : error ? (
               <div className="flex flex-col items-start gap-3 p-4 bg-white dark:bg-card border-4 border-foreground">
                 <div className="text-sm">
@@ -241,7 +251,7 @@ export default function PortfolioHistory() {
               <div className="relative">
                 <ChartContainer
                   config={chartConfig}
-                  className="w-full h-64 sm:h-80 md:h-96"
+                  className="w-full h-48 sm:h-56 md:h-64"
                 >
                   <AreaChart
                     accessibilityLayer
@@ -249,8 +259,8 @@ export default function PortfolioHistory() {
                     margin={{
                       left: 0,
                       right: 0,
-                      top: 20,
-                      bottom: 20,
+                      top: 10,
+                      bottom: 10,
                     }}
                     onMouseMove={(data) => {
                       if (data && data.activePayload) {
@@ -304,8 +314,9 @@ export default function PortfolioHistory() {
                     </defs>
                     <CartesianGrid
                       vertical={false}
-                      horizontal={false}
-                      strokeOpacity={0}
+                      horizontal={true}
+                      strokeOpacity={0.08}
+                      stroke="hsl(var(--foreground))"
                     />
                     <XAxis
                       dataKey="date"
@@ -371,42 +382,98 @@ export default function PortfolioHistory() {
           </CardContent>
         </Card>
 
-        <div className="grid grid-cols-2 gap-3 sm:gap-4 md:gap-6 mt-4 sm:mt-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 md:gap-5 mt-4 sm:mt-5">
           <Card className="border-4 border-foreground shadow-none bg-white dark:bg-card">
-            <CardHeader className="pb-2 sm:pb-3 md:pb-4 bg-white dark:bg-card">
-              <CardDescription className="text-[9px] sm:text-[10px] md:text-xs font-bold uppercase tracking-widest text-muted-foreground">
-                Total Value
-              </CardDescription>
-              <CardTitle className="text-lg sm:text-2xl md:text-3xl lg:text-4xl font-bold font-mono">
-                {loading ? (
-                  <span className="inline-block h-5 sm:h-6 md:h-8 w-20 sm:w-24 md:w-32 animate-pulse bg-muted" />
-                ) : (
-                  formatCurrency(latestValue)
-                )}
-              </CardTitle>
-            </CardHeader>
-          </Card>
-
-          <Card className="border-4 border-foreground shadow-none bg-white dark:bg-card">
-            <CardHeader className="pb-2 sm:pb-3 md:pb-4 bg-white dark:bg-card">
-              <CardDescription className="text-[9px] sm:text-[10px] md:text-xs font-bold uppercase tracking-widest text-muted-foreground">
+            <CardHeader className="py-1.5 sm:py-2 px-4 sm:px-5 bg-white dark:bg-card flex flex-col items-start justify-between h-full">
+              <CardDescription className="text-[9px] sm:text-[10px] md:text-xs font-bold uppercase tracking-wide text-muted-foreground mb-2">
                 Total Return
               </CardDescription>
-              <CardTitle className="text-lg sm:text-2xl md:text-3xl lg:text-4xl font-bold font-mono">
+              <CardTitle className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold font-mono mb-1.5">
                 {loading ? (
-                  <span className="inline-block h-5 sm:h-6 md:h-8 w-16 sm:w-20 md:w-24 animate-pulse bg-muted" />
+                  <span className="inline-block h-7 sm:h-8 md:h-10 w-20 sm:w-24 md:w-28 animate-pulse bg-muted" />
                 ) : (
                   <span
                     className={
-                      latestReturnPct !== null && latestReturnPct >= 0
+                      summary && summary.total_return >= 0
                         ? "text-emerald-600 dark:text-emerald-500"
                         : "text-red-600 dark:text-red-500"
                     }
                   >
-                    {formatPercent(latestReturnPct)}
+                    {formatPercent(summary ? summary.total_return * 100 : null)}
                   </span>
                 )}
               </CardTitle>
+              <CardDescription className="text-[9px] sm:text-[10px] md:text-xs font-medium text-muted-foreground">
+                {selectedPeriod === "1Y"
+                  ? "For 1 year"
+                  : selectedPeriod === "ALL"
+                    ? "All time"
+                    : `For ${selectedPeriod.toLowerCase()}`}
+              </CardDescription>
+            </CardHeader>
+          </Card>
+
+          <Card className="border-4 border-foreground shadow-none bg-white dark:bg-card">
+            <CardHeader className="py-1.5 sm:py-2 px-4 sm:px-5 bg-white dark:bg-card flex flex-col items-start justify-between h-full">
+              <CardDescription className="text-[9px] sm:text-[10px] md:text-xs font-bold uppercase tracking-wide text-muted-foreground mb-2">
+                Annualized Mean Return
+              </CardDescription>
+              <CardTitle className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold font-mono mb-1.5">
+                {loading ? (
+                  <span className="inline-block h-7 sm:h-8 md:h-10 w-20 sm:w-24 md:w-28 animate-pulse bg-muted" />
+                ) : (
+                  <span
+                    className={
+                      summary && summary.mean_return_ann >= 0
+                        ? "text-emerald-600 dark:text-emerald-500"
+                        : "text-red-600 dark:text-red-500"
+                    }
+                  >
+                    {formatPercent(
+                      summary ? summary.mean_return_ann * 100 : null,
+                    )}
+                  </span>
+                )}
+              </CardTitle>
+              <CardDescription className="text-[9px] sm:text-[10px] md:text-xs font-medium text-muted-foreground">
+                Expected annual return
+              </CardDescription>
+            </CardHeader>
+          </Card>
+
+          <Card className="border-4 border-foreground shadow-none bg-white dark:bg-card">
+            <CardHeader className="py-1.5 sm:py-2 px-4 sm:px-5 bg-white dark:bg-card flex flex-col items-start justify-between h-full">
+              <CardDescription className="text-[9px] sm:text-[10px] md:text-xs font-bold uppercase tracking-wide text-muted-foreground mb-2">
+                Annualized Volatility
+              </CardDescription>
+              <CardTitle className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold font-mono mb-1.5">
+                {loading ? (
+                  <span className="inline-block h-7 sm:h-8 md:h-10 w-20 sm:w-24 md:w-28 animate-pulse bg-muted" />
+                ) : (
+                  formatPercent(summary ? summary.volatility_ann * 100 : null)
+                )}
+              </CardTitle>
+              <CardDescription className="text-[9px] sm:text-[10px] md:text-xs font-medium text-muted-foreground">
+                Risk measure (std dev)
+              </CardDescription>
+            </CardHeader>
+          </Card>
+
+          <Card className="border-4 border-foreground shadow-none bg-white dark:bg-card">
+            <CardHeader className="py-1.5 sm:py-2 px-4 sm:px-5 bg-white dark:bg-card flex flex-col items-start justify-between h-full">
+              <CardDescription className="text-[9px] sm:text-[10px] md:text-xs font-bold uppercase tracking-wide text-muted-foreground mb-2">
+                Annualized Sharpe
+              </CardDescription>
+              <CardTitle className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold font-mono mb-1.5">
+                {loading ? (
+                  <span className="inline-block h-7 sm:h-8 md:h-10 w-16 sm:w-20 md:w-24 animate-pulse bg-muted" />
+                ) : (
+                  (summary?.sharpe?.toFixed(2) ?? "—")
+                )}
+              </CardTitle>
+              <CardDescription className="text-[9px] sm:text-[10px] md:text-xs font-medium text-muted-foreground">
+                Risk-adjusted return
+              </CardDescription>
             </CardHeader>
           </Card>
         </div>
